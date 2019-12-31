@@ -67,6 +67,8 @@ SELF = 3
 BODY = 4
 HEAD = 5
 
+TOO_CLOSE = 3
+
 def makeBoard(data):
     board = data["board"]
     arr = initBoard(board["height"], board["width"])
@@ -86,7 +88,7 @@ def makeBoard(data):
         else:
             arr[y][x] = HEAD
 
-        for part in snake["body"][1:]:
+        for part in snake["body"][1:-1]:#-1 so doesnt count tail
             if isSelf:
                 arr[part["y"]][part["x"]] = SELF
             else:
@@ -115,9 +117,6 @@ def noEnemies(data):
 def noFood(data):
     return len(data["board"]["food"]) == 0
 
-def ouroboros(board):
-    pass
-
 def getFoodPos(data):
     return data["board"]["food"]
 
@@ -129,26 +128,48 @@ def retracePath(parents, adjNode, start):
         path.insert(0, v)
     return path
 
-def isSuicide(path, adjLi):
-    pass
+#note that doesnt add in spaces that will no longer be self
+def possibleLi(adjLi, path):
+    newLi = adjLi.copy()
+    for nodeKey in path[:-1]:
+        delAdjNode(newLi, nodeKey)
+    #print("debugMe",newLi)
+    return newLi
+
+
+def isSuicide(adjLi, path):
+    head = path[-1]
+    adjLi[head][1] = MYHEAD#so doesnt find itself
+
+    futureAdj = possibleLi(adjLi, path)
+    minDist = pathToThing(futureAdj, path[-1], FOOD)
+    if type(minDist) != int:
+        minDist = len(minDist)
+    
+    adjLi[head][1] = FOOD#so doesnt find itself
+
+    return minDist == -1 or minDist < TOO_CLOSE
 
 #gives shortest path to nearest food
-def getFood(adjLi, data, headPos):
+def getFood(adjLi, headPos):
     visitQueue = [headPos]
     parents = {}
+    aPath = False
     while visitQueue: #is false only if empty
         baseKey = visitQueue.pop()
         for adjNode in adjLi[baseKey][0]:
             if adjNode not in parents.keys(): #if undiscovered
                 parents[adjNode] = baseKey #mark parent relationship
                 if adjLi[adjNode][1] == FOOD:
+                    aPath = True
                     path = retracePath(parents, adjNode, headPos)
-                    if not isSuicide(path, adjLi):
-                        return dirToAdj(headPos, path[1])
+                    if not isSuicide(adjLi, path):
+                        return dirToAdj(headPos, path[1]) 
                     #else just keeps going
                 visitQueue.insert(0, adjNode)
-    print("couldnt find food")
-    return move_response("up")
+    if aPath:
+        return -2
+    return -1
 
 def dirToAdj(head, adj):
     theDir="up"
@@ -161,12 +182,6 @@ def dirToAdj(head, adj):
     elif adj[0] == head[0]-1:
         theDir = "left"
     return move_response(theDir)
-
-def shortestPath(start, end, board):
-    pass
-
-def isStarving(data):
-    return data["you"]["health"] <= STARVING
 
 def getAdjNodes(board, x, y):
     adj = []
@@ -189,9 +204,160 @@ def makeAdjList(board):
                 adjLi[key] = [adjNodes, el]
     return adjLi
 
-def foodInRange(data):
-    pass
+def makeSafeAdj(adjLi, data):
+    safeAdj = adjLi.copy()
+    for snake in data["board"]["snakes"]:
+        if snake["id"] == data["you"]["id"]:
+            continue
+        snakeHead = snake["body"][0]
+        xHead = snakeHead["x"]
+        yHead = snakeHead["y"]
+        for x in range(xHead-1, xHead+1):
+            for y in range(yHead-1, yHead+1):
+                delAdjNode(safeAdj, (x,y))
+    return safeAdj
 
+def delAdjNode(adjLi, delNode):
+    if delNode not in adjLi.keys():
+        return
+    for connected in adjLi[delNode][0]:
+        if delNode not in adjLi[connected][0]:
+            continue
+        adjLi[connected][0].remove(delNode)
+    del adjLi[delNode]
+
+def selfLength(data):
+    return len(data["you"]["body"])
+
+def needsFoodNow(safeLi, currPos, currHp, bodyLength):
+    path = pathToThing(safeLi, currPos, FOOD)
+    if type(path) == int:
+        return False
+    return len(path) >= currHp-bodyLength
+
+def tailPos(data):
+    tailSegment = data["you"]["body"][-1]
+    return (tailSegment["x"], tailSegment["y"])
+
+#can pass either int or tuple as target
+def pathToThing(adjLi, headPos, target):
+    visitQueue = [headPos]
+    parents = {}
+    while visitQueue: #is false only if empty
+        baseKey = visitQueue.pop()
+        for adjNode in adjLi[baseKey][0]:
+            if adjNode not in parents.keys(): #if undiscovered
+                parents[adjNode] = baseKey #mark parent relationship
+                if adjNode == target or adjLi[adjNode][1] == target:
+                    path = retracePath(parents, adjNode, headPos)
+                    return path
+
+                visitQueue.insert(0, adjNode)
+    return -1
+
+
+#TODO change to ouroborous, if possible
+def stallForTime(adjLi, currPos, data):
+    iterations = 15
+
+    ouroborous = pathToThing(adjLi, currPos, tailPos(data))
+    if ouroborous != -1:
+        return dirToAdj(currPos, ouroborous[1])
+    #if past this there is no path to tail
+    
+    path = longestDfs(adjLi, currPos, iterations)
+    if len(path) == 1:
+        return errMove()
+    return dirToAdj(currPos,path[1])
+
+def longestDfs(adjLi, currPos, iterations):
+    global DFSLen
+    max = [None,0]
+    for _ in range(iterations):
+        DFSLen = None
+        curr = DFS(adjLi, currPos)
+        #print("dfsLen is", DFSLen)
+        if DFSLen > max[1]:
+            max = [curr, DFSLen]
+    return max[0]
+
+DFSLen = None
+
+def DFS(adjLi, currPos, visited=None):
+    global DFSLen
+
+    if DFSLen is not None:#path that will be used is already done
+        return
+
+    if visited is None:
+        visited = [currPos]
+    else:
+        visited.append(currPos)
+        
+    options = adjLi[currPos][0].copy()
+    random.shuffle(options)
+
+    for adj in options:
+        if adj in visited:
+            continue
+        DFS(adjLi, adj, visited)
+    
+    if DFSLen is None:
+        DFSLen = len(visited)
+    return visited
+        
+#TODO make it faster
+def getCorners(pos):
+    arr = []
+    xStart = pos[0]
+    yStart = pos[1]
+    for x in range(xStart-2, xStart+2):
+        for y in range(yStart-2, yStart+2):
+            arr.append((x,y))
+
+    for x in range(xStart-1, xStart+1):
+        for y in range(yStart-1, yStart+1):
+            arr.remove((x,y))
+    print("XQC", arr)
+    return arr
+
+def sideBlock(currPos, enemyHead, closestCorner, adjLi, board):
+    print("sideblocking")
+    return
+
+def errMove():
+    return move_response("up")
+
+def attackProtocol(adjLi, currPos, board, data):
+    pathToVictim = pathToThing(adjLi, currPos, HEAD)
+
+    victimHead = None
+    if pathToVictim == -1:
+        return stallForTime(adjLi, currPos, data)
+        print("no victims")
+    else:#if no victim in range
+        victimHead = pathToVictim[-1]
+    
+    print("Yes Victims")
+
+    shortestPath = None
+    for corner in getCorners(victimHead):
+        pathToCorner = pathToThing(adjLi, currPos, corner)
+        if pathToCorner == -1:
+            continue
+        if shortestPath is None or len(pathToCorner) < len(shortestPath):
+            shortestPath = pathToCorner
+
+    if shortestPath is None:
+        return stallForTime(adjLi, currPos, data)
+
+    closestCorner = shortestPath[-1]
+    if currPos == closestCorner:
+        return sideBlock(currPos, victimHead, closestCorner, adjLi, board)
+    else:
+        return dirToAdj(currPos, shortestPath[1])#go to that square
+
+#TODO make tails not count as objects
 
 '''{"game":{"id":"8481f485-029f-4ca7-82d3-3345bc70d76b"},"turn":7,"board":{"height":15,"width":15,"food":[{"x":11,"y":2},{"x":6,"y":8},{"x":5,"y":11},{"x":1,"y":3},{"x":7,"y":13},{"x":14,"y":11},{"x":10,"y":7},{"x":14,"y":13},{"x":1,"y":6},{"x":7,"y":14}],"snakes":[{"id":"c2e6e057-bea2-496e-8e4c-7b213117452d","name":"me","health":93,"body":[{"x":9,"y":3},{"x":8,"y":3},{"x":7,"y":3}]}]},"you":{"id":"540630d1-29e9-477a-9ab7-518222bf85f8","name":"you","health":93,"body":[{"x":15,"y":1},{"x":14,"y":1},
 {"x":13,"y":1}]}}'''
@@ -206,39 +372,32 @@ PERSONAL_SPACE = 3
 def move():
     data = bottle.request.json
     currHp = data["you"]["health"]
-    #print("currhp is", currHp)
     currPos = headPos(data)
-    """
-    TODO: Using the data from the endpoint request object, your
-            snake AI must choose a direction to move in.
-    """
+    bodyLen = selfLength(data)
     board = makeBoard(data)
-    adjList = makeAdjList(board)
+    adjLi = makeAdjList(board)
+    #safeLi = makeSafeAdj(adjLi, data)
+
+    if needsFoodNow(adjLi, currPos, currHp, bodyLen):
+        foodDir = getFood(adjLi, currPos)
+        if foodDir == -1 or foodDir == -2:
+            return stallForTime(adjLi, currPos, data)
+        else:
+            return foodDir
 
     if noEnemies(data):
-        if noFood(data):
-            return ouroboros(board)#circle itself
-        else:
-            return getFood(adjList, data, currPos)
+        return stallForTime(adjLi, currPos, data)
     
-    else:
-        if isStarving(data):
-            if foodInRange(data):
-                return getFood(adjList, data, currPos)
-        print("there are enemie")
+    #if here then doesnt need food and enemies are around
+    return attackProtocol(adjLi, currPos, board, data)
 
-    
-    #if here is an enemy
-
-    
-        
     #showArr(board)
     #print(adjList)
     #print(json.dumps(data))
 
     directions = ['up', 'down', 'left', 'right']
-    #direction = random.choice(directions)
-    direction = "right"
+    direction = "up"
+    print("you messed up bro")
     return move_response(direction)
 
 
