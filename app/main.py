@@ -50,12 +50,6 @@ def ping():
 @bottle.post('/start')
 def start():
     data = bottle.request.json
-
-    """
-    TODO: If you intend to have a stateful snake AI,
-            initialize your snake state here using the
-            request's data if necessary.
-    """
     print(json.dumps(data))
 
     color = "#00FFFF"
@@ -65,7 +59,7 @@ def start():
 def initBoard(height, width):
     """creates an empty board(filled with 0's)
     
-    Arguments:
+    Arguments:\n
         height {int} -- the height of the board
         width {int} -- the width of the board
     
@@ -82,8 +76,8 @@ def initBoard(height, width):
 def makeBoard(data):
     """creates a board to model what is going on in the game
     
-    Arguments:
-        data {dictionary} -- the game information
+    Arguments:\n
+        data {dict} -- the game information
     
     Returns:
         list of list of ints -- the model of what is going on,
@@ -119,7 +113,7 @@ def makeBoard(data):
 def showArr(arr):
     """shows an array, for debugging ONLY
     
-    Arguments:
+    Arguments:\n
         arr {list of lists} -- the array to be shown
     """
     for line in arr:
@@ -134,8 +128,8 @@ def showArr(arr):
 def headPos(data):
     """gets the position of our snakes head
     
-    Arguments:
-        data {dictionary} -- the game data
+    Arguments:\n
+        data {dict} -- the game data
     
     Returns:
         tuple -- x,y coordinates of the head
@@ -146,8 +140,8 @@ def headPos(data):
 def noEnemies(data):
     """checks if there are any enemies on the board
     
-    Arguments:
-        data {dictionary} -- the game data
+    Arguments:\n
+        data {dict} -- the game data
     
     Returns:
         boolean -- true if no other snakes around, else false
@@ -158,8 +152,8 @@ def noEnemies(data):
 def retracePath(parents, finalNode, start):
     """retraces path from destination to start
     
-    Arguments:
-        parents {dictionary} -- has [parent]:children relationships
+    Arguments:\n
+        parents {dict} -- has [parent]:children relationships
         finalNode {tuple} -- x,y coordinates of final element in path
         start {tuple} -- x,y coordinates of first element in path
     
@@ -179,8 +173,8 @@ def possibleLi(adjLi, path):
     note that doesnt remove parts of snake that are no longer there
     TODO remove tail of snake depending on length
     
-    Arguments:
-        adjLi {dictionary} -- the original ajacency list
+    Arguments:\n
+        adjLi {dict} -- the original ajacency list
         path {list of tuples} -- the list of x,y coordinates of nodes to be travelled
     
     Returns:
@@ -196,8 +190,8 @@ def possibleLi(adjLi, path):
 def isSuicide(adjLi, path):
     """checks if a given path would likely lead to premature snake death
     
-    Arguments:
-        adjLi {dictionary} -- the adjacency list
+    Arguments:\n
+        adjLi {dict} -- the adjacency list
         path {list of tuples} -- nodes the snake would take
     
     Returns:
@@ -219,12 +213,12 @@ def getFood(adjLi, headPos):
     """finds a path that would best find food for the snake without
     putting it into mortal danger
     
-    Arguments:
-        adjLi {dictionary} -- the adjacency list for possible moves
-        headPos {tuple} -- the x,y coordinates of where the snake head is
+    Arguments:\n
+        adjLi {dict} -- the adjacency list for possible moves.
+        headPos {tuple} -- the x,y coordinates of where the snake head is.
     
     Returns:
-        move_response -- the direction to move towards to best get food
+        move_response -- the direction to move towards to best get food.
     """
     visitQueue = [headPos]
     parents = {}
@@ -246,14 +240,14 @@ def getFood(adjLi, headPos):
     return -1
 
 def dirToAdj(head, adj):
-    """finds the direction from one node to an adjacent one
+    """finds the direction from one node to an adjacent one.
     
-    Arguments:
-        head {tuple} -- the x,y coordinates of the node being looked from
-        adj {tuple} -- the x,y coordinates of the node being looked towards
+    Arguments:\n
+        head {tuple} -- the x,y coordinates of the node being looked from.
+        adj {tuple} -- the x,y coordinates of the node being looked towards.
     
     Returns:
-        string -- move_response that would get from head to adj
+        string -- move_response that would get from head to adj.
     """
     theDir="up"
     if adj[1] == head[1]-1:
@@ -267,12 +261,12 @@ def dirToAdj(head, adj):
     return move_response(theDir)
 
 def getAdjNodes(board, x, y):
-    """finds the adjacent nodes of a node
+    """finds the adjacent nodes of a node.
     
-    Arguments:
-        board {list of lists} -- the board on which the snakes are
-        x {int} -- the x position of the square being checked
-        y {int} -- the y position of the square being checked
+    Arguments:\n
+        board {list of lists} -- the board on which the snakes slither.
+        x {int} -- the x position of the square being checked.
+        y {int} -- the y position of the square being checked.
     
     Returns:
         list of tuples -- the keys of adjacent nodes
@@ -287,15 +281,15 @@ def getAdjNodes(board, x, y):
 def makeAdjList(board):
     """makes the adjacency list for possible squares the snake can traverse
     
-    Arguments:
-        board {list of lists} -- the board with values defining whats there
-            see CONSTANTS at top of file for more info
+    Arguments:\n
+        board {list of lists} -- the board with ints defining what is there
+            see CONSTANTS at top of file for more info.
     
     Returns:
         dictionary -- the adjacency list, with keys being x,y tuple coordinate
-            of the square and value being a list
-                [0] is list of adjacent nodes
-                [1] is int identity of node, see top of file again
+            of the square and value being a list.
+                [0] is list of adjacent nodes.
+                [1] is int identity of node, see top of file again.
     """
     #showArr(board)
     adjLi = {}
@@ -328,9 +322,9 @@ def makeSafeAdj(adjLi, data):
 def delAdjNode(adjLi, delNode):
     """deletes a node and anything referenceing it from the adjacency list
     
-    Arguments:
-        adjLi {dictionary} -- the adjacency list
-        delNode {tuple} -- the node to be deleted
+    Arguments:\n
+        adjLi {dict} -- the adjacency list.
+        delNode {tuple} -- the node to be deleted.
     """
     if delNode not in adjLi.keys():
         return
@@ -343,8 +337,8 @@ def delAdjNode(adjLi, delNode):
 def selfLength(data):
     """finds how long the snake is
     
-    Arguments:
-        data {dictionary} -- the game data
+    Arguments:\n
+        data {dict} -- the game data
     
     Returns:
         int -- the snakes length
@@ -355,8 +349,8 @@ def needsFoodNow(safeLi, currPos, currHp, bodyLength):
     """determines if the snake has enough time to make it to
     the nearest food
     
-    Arguments:
-        safeLi {dictionary} -- the adjacency list
+    Arguments:\n
+        safeLi {dict} -- the adjacency list
         currPos {tuple} -- the x,y coordinate of the snakes head
         currHp {int} -- how much health the snake has remaining
         bodyLength {int} -- how long the snake is
@@ -372,8 +366,8 @@ def needsFoodNow(safeLi, currPos, currHp, bodyLength):
 def tailPos(data):
     """gets the position of the tail of the snake
     
-    Arguments:
-        data {dictionary} -- the game data
+    Arguments:\n
+        data {dict} -- the game data
     
     Returns:
         tuple -- x,y coordinate of the tail
@@ -385,8 +379,8 @@ def tailPos(data):
 def pathToThing(adjLi, headPos, target):
     """finds the shortest path to a target from the head position
     
-    Arguments:
-        adjLi {dictionary} -- the adjacency list
+    Arguments:\n
+        adjLi {dict} -- the adjacency list
         headPos {tuple} -- the snake head position
         target {tuple or int} -- if is an int will find corresponding 
             square with that type, if is tuple will find that specific coordinate
@@ -416,8 +410,8 @@ def stallForTime(adjLi, currPos, data):
     the space it takes up, will chase its tail if it can,
     otherwise take the path that will maximize space taken up
 
-    Arguments:
-        adjLi {dictionary} -- the adjacency list
+    Arguments:\n
+        adjLi {dict} -- the adjacency list
         currPos {tuple} -- the x,y coordinate of the snake head
         data {nested dictionary} -- all the game data
 
@@ -440,13 +434,13 @@ def longestDfs(adjLi, currPos, iterations):
     """finds a decently long path from currPos, 
     ends if is no longer continuous
     
-    Arguments:
-        adjLi {dictionary} -- the adjacency list for the positioning
-        currPos {tuple} -- the x,y coordinate of the snake head
-        iterations {int} -- how many times it should look around for a new path
+    Arguments:\n
+        adjLi {dict} -- the adjacency list for the positioning.
+        currPos {tuple} -- the x,y coordinate of the snake head.
+        iterations {int} -- how many times it should look around for a new path.
     
     Returns:
-        list of tuples -- the longest path it could find, starting at the head
+        list of tuples -- the longest path it could find, starting at the head.
     """
     global DFSLen
     max = [None,0]
@@ -464,12 +458,12 @@ def DFS(adjLi, currPos, visited=None):
     """performs depth first search, choosing randomly from given options
         note that when backs out for first time the search stops
     
-    Arguments:
-        adjLi {dicitonary} -- the adjacency list
-        currPos {tuple} -- the x,y coordinates of the start of dfs
+    Arguments:\n
+        adjLi {dicitonary} -- the adjacency list.
+        currPos {tuple} -- the x,y coordinates of the start of dfs.
     
-    Keyword Arguments:
-        visited {int or None} -- list of visited nodes (default: {None})
+    Keyword Arguments:\n
+        visited {int or None} -- list of visited nodes (default: {None}).
     
     Returns:
         list of tuples -- sequence of nodes from currPos to end
@@ -500,8 +494,8 @@ def DFS(adjLi, currPos, visited=None):
 def getCorners(pos):
     """gets all positions in a square around a given position
 
-    Arguments:
-        pos {tuple} -- pos[0] = x position || pos[1] = y position
+    Arguments:\n
+        pos {tuple} -- the x,y coordinates of a node
 
     Returns:
         list of tuples-- the positions in the "strike zone"
@@ -519,13 +513,56 @@ def getCorners(pos):
     print("XQC", arr)
     return arr
 
-#TODO figure out how to stay in head space and pick best side
-def sideBlock(currPos, enemyHead, closestCorner, adjLi, board):
-    print("sideblocking")
-    return
+CW_DICT = {(-2,-1):(-2,0), (-2,0):(-2,1),
+(-2,1):(-2, 2), (-2, 2):(-1, 2), (-1,2):(0,2),
+(0,2):(1,2), (1,2):(2,2), (2,2):(2,1), (2,1):(2,0),
+(2,0):(2,-1), (2,-1):(2,-2), (2,-2):(1,-2), (1,-2):(0,-2),
+(0,-2):(-1,-2), (-1,-2):(-2,-2), (-2,-2):(-2,-1)}
+
+CCW_DICT = {(-2, 0):(-2, -1), (-2, 1):(-2, 0),
+(-2, 2):(-2, 1), (-1, 2):(-2, 2), (0, 2):(-1, 2),
+(1, 2):(0, 2), (2, 2):(1, 2), (2, 1):(2, 2), (2, 0):(2, 1),
+(2, -1):(2, 0), (2,-2):(2, -1), (1, -2):(2, -2), (0, -2):(1, -2),
+(-1, -2):(0, -2),(-2, -2):(-1, -2), (-2, -1):(-2, -2)}
+
+#true is clockwise
+def rotateAttack(currPos, enemyHead, rotateDir=True, returnMove=True):
+    global CW_DICT
+    posDiff = (currPos[0]-enemyHead[0], currPos[1]-enemyHead[1])
+    newDiff =CW_DICT[posDiff] if rotateDir else CCW_DICT[posDiff]
+    if returnMove:
+        return dirToAdj(currPos, (newDiff[0]+enemyHead[0], newDiff[1]+enemyHead[1]))
+    else:
+        return (newDiff[0]+enemyHead[0], newDiff[1]+enemyHead[1])
+
+def clockwiseSquare(currPos, enemyHead, board):
+    nextNode = rotateAttack(currPos, enemyHead, True, False)
+    return board[nextNode[1]][nextNode[0]]
+
+def counterclockwiseSquare(currPos, enemyHead, board):
+    nextNode = rotateAttack(currPos, enemyHead, False, False)
+    return board[nextNode[1]][nextNode[0]]
+
+def safeDir(currPos, enemyHead, board):
+    if clockwiseSquare(currPos, enemyHead, board) < SELF:
+        return 0#clockwise
+    if counterclockwiseSquare(currPos, enemyHead, board) < SELF:
+        return 1#counterclockwise
+    return 2#nowhere is safe
+
+#TODO figure out how to pick best side, maybe take average of DFS
+#at each possibility, pick longest one
+def sideBlock(currPos, enemyHead, adjLi, board, data):
+    safeDirection = safeDir(currPos, enemyHead, board)
+    if safeDirection == 0:#clockwise
+        return rotateAttack(currPos, enemyHead, True)
+    elif safeDirection == 1:#counter clockwise
+        return rotateAttack(currPos, enemyHead, False)
+    else:
+        return stallForTime(adjLi, currPos, data)
 
 def errMove():
-    """for when there is no good options
+    """for when there is no good option
     
     Returns:
         move_response("up")
@@ -557,7 +594,7 @@ def attackProtocol(adjLi, currPos, board, data):
 
     closestCorner = shortestPath[-1]
     if currPos == closestCorner:
-        return sideBlock(currPos, victimHead, closestCorner, adjLi, board)
+        return sideBlock(currPos, victimHead, adjLi, board, data)
     else:
         return dirToAdj(currPos, shortestPath[1])#go to that square
 
@@ -568,8 +605,6 @@ def attackProtocol(adjLi, currPos, board, data):
 #python app\main.py
 #http://0.0.0.0:8088/
 
-STARVING = 5
-PERSONAL_SPACE = 3
 
 #general TODO
 '''
@@ -585,12 +620,12 @@ def move():
     bodyLen = selfLength(data)
     board = makeBoard(data)
     adjLi = makeAdjList(board)
-    #safeLi = makeSafeAdj(adjLi, data)
+    safeLi = makeSafeAdj(adjLi, data)
 
-    if needsFoodNow(adjLi, currPos, currHp, bodyLen):
-        foodDir = getFood(adjLi, currPos)
-        if foodDir == -1 or foodDir == -2:
-            return stallForTime(adjLi, currPos, data)
+    if needsFoodNow(safeLi, currPos, currHp, bodyLen):
+        foodDir = getFood(safeLi, currPos)
+        if foodDir == -1 or foodDir == -2:#no path or no safe path
+            return stallForTime(safeLi, currPos, data)
         else:
             return foodDir
 
