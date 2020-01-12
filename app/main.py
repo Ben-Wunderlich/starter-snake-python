@@ -169,9 +169,21 @@ def retracePath(parents, finalNode, start):
 def funkyNewBoard(board, body, pathLen):
     #board but without tail, length of pathLength
     nuBoard = copy.deepcopy(board)
-    removedSegments = body[:-pathLen]
+    pathLen -= 1
+    removedSegments = body[-pathLen:]
+    leftovers = body[:-pathLen]
     for x, y in removedSegments:
         nuBoard[y][x] = 0
+    for x,y in leftovers:
+        nuBoard[y][x] = 4
+    
+    newHead = leftovers[0]
+    nuBoard[newHead[1]][newHead[0]]=3
+    
+    #print("from")
+    #showArr(board)
+    print("to")
+    showArr(nuBoard)
     return nuBoard
 
 def listifyMyBody(data):
@@ -183,12 +195,12 @@ def listifyMyBody(data):
 def fixTail(futureAdj, board, path, data):
     pathLen = len(path)
     body = listifyMyBody(data)
-    body.extend(path[1:])#[1:] so doesnt duplicate head
+    body = path[::-1] + body[1:]#[1:] so doesnt duplicate head
     newBoard = funkyNewBoard(board, body, pathLen)
-    for segment in body[:-(pathLen-1)]:
-        adjNodes = getAdjNodes(newBoard, segment[0], segment[1])
-        for node in adjNodes:
-            if node in futureAdj:
+    for segment in body[-(pathLen-1):]:
+        adjNodes = getAdjNodes(newBoard, segment[0], segment[1], True)
+        for node in adjNodes:#adding connections back in
+            if node in futureAdj and not segment in futureAdj[node][0]:
                 futureAdj[node][0].append(segment)
         futureAdj[segment] = [adjNodes, 0, 1]
 
@@ -207,9 +219,12 @@ def possibleAdj(adjLi, board, path, data):
     newLi = copy.deepcopy(adjLi)
     for nodeKey in path[:-1]:
         delAdjNode(newLi, nodeKey)
+    newLi[path[-1]][1]=3
     fixTail(newLi, board, path, data)
-    #print("after")
-    #viewAdjLi(newLi, data)
+    print("before")
+    viewAdjLi(adjLi, data)
+    print("after")
+    viewAdjLi(newLi, data)
     return newLi
 
 #jan 19 csc labs start
@@ -224,12 +239,12 @@ def isSuicide(adjLi, path, board, data):
     Returns:
         boolean -- true if is probably suicide, else false
     """
-    #print("before")
-    #viewAdjLi(adjLi, data)
     head = path[-1]
     futureAdj = possibleAdj(adjLi, board, path, data)
     adjLi[head][1] = MYHEAD#so doesnt find itself
     minDist = pathToThing(futureAdj, head, FOOD)
+    #print("AYAYA", minDist)
+    #viewAdjLi(futureAdj, data)
     if type(minDist) != int:
         minDist = len(minDist)
     
@@ -263,7 +278,7 @@ def dirToAdj(head, adj):
         theDir = "left"
     return move_response(theDir)
 
-def getAdjNodes(board, x, y):
+def getAdjNodes(board, x, y, all=False):
     """finds the adjacent nodes of a node.
     
     Arguments:\n
@@ -279,6 +294,11 @@ def getAdjNodes(board, x, y):
         adj.append((x-1, y))
     if y > 0 and board[y-1][x] < SELF:
         adj.append((x, y-1))
+    if all:
+        if x < len(board)-1 and board[y][x+1] < SELF:
+            adj.append((x+1, y))
+        if y < len(board[0])-1 and board[y+1][x] < SELF:
+            adj.append((x, y+1))
     return adj
 
 def makeWeightBFS(adjLi, startPoint, starting_value):
@@ -388,8 +408,8 @@ def delAdjNode(adjLi, delNode):
         adjLi {dict} -- the adjacency list.
         delNode {tuple} -- the node to be deleted.
     """
-    if delNode not in adjLi.keys():
-        return
+    #if delNode not in adjLi:
+     #   return
     for connected in adjLi[delNode][0]:
         adjLi[connected][0].remove(delNode)
     del adjLi[delNode]
