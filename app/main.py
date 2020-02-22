@@ -180,10 +180,6 @@ def funkyNewBoard(board, body, pathLen):
     newHead = leftovers[0]
     nuBoard[newHead[1]][newHead[0]]=3
     
-    #print("from")
-    #showArr(board)
-    print("to")
-    showArr(nuBoard)
     return nuBoard
 
 def listifyMyBody(data):
@@ -192,6 +188,7 @@ def listifyMyBody(data):
         li.append((segment["x"], segment["y"]))
     return li
 
+#TODO change where enemies are, remove tails and maybe project heads
 def fixTail(futureAdj, board, path, data):
     pathLen = len(path)
     body = listifyMyBody(data)
@@ -221,10 +218,6 @@ def possibleAdj(adjLi, board, path, data):
         delAdjNode(newLi, nodeKey)
     newLi[path[-1]][1]=3
     fixTail(newLi, board, path, data)
-    print("before")
-    viewAdjLi(adjLi, data)
-    print("after")
-    viewAdjLi(newLi, data)
     return newLi
 
 #jan 19 csc labs start
@@ -243,8 +236,6 @@ def isSuicide(adjLi, path, board, data):
     futureAdj = possibleAdj(adjLi, board, path, data)
     adjLi[head][1] = MYHEAD#so doesnt find itself
     minDist = pathToThing(futureAdj, head, FOOD)
-    #print("AYAYA", minDist)
-    #viewAdjLi(futureAdj, data)
     if type(minDist) != int:
         minDist = len(minDist)
     
@@ -306,7 +297,7 @@ def makeWeightBFS(adjLi, startPoint, starting_value):
     parents={}
     while visitQueue: #is false only if empty
         baseKey = visitQueue.pop()
-        currLvl = adjLi[baseKey][2]//2
+        currLvl = adjLi[baseKey][2]//1.5
         if currLvl <= 0:#wont have any more impact
             break
 
@@ -339,9 +330,6 @@ def minUndiscovered(undiscovered):
     if minPathLen == math.inf:#not reachable by head
         return None
     return minKey
-
-#god is an american(song)
-#XXX how many peope use vscode?
 
 def makeDijk(adjLi, currPos):
     dijkTable = {}#form is (x, y):[minDist, lastVertex] #start as (x,y):[None,None]
@@ -516,7 +504,11 @@ def getFurthestSquare(adjLi, currPos, board, data):
     #make another dict  whwere key=(x,y) space, value= sum of position of body pieces
     #return one with maximum value
 
-def stallForTime(adjLi, currPos, board, data):
+ITERATIONS = 15
+#TODO make it so tries to be near food and protects it
+#XXX
+def stallForTime(adjLi, currPos, board, data, bestMeal=None):
+    global ITERATIONS
     """makes the snake move around in a way that will best maximize 
     the space it takes up, will chase its tail if it can,
     otherwise take the path that will maximize space taken up
@@ -529,19 +521,18 @@ def stallForTime(adjLi, currPos, board, data):
     Returns:
         move_response -- the direction that will best stall for time
     """
-    iterations = 15
 
     ouroborous = pathToThing(adjLi, currPos, tailPos(data))
-    if ouroborous != -1:
+    if ouroborous != -1:# and ouroborousIsSafe(adjLi, ouroborous, board):
         return dirToAdj(currPos, ouroborous[1])
     #if past this there is no path to tail
-
     targetSquare = getFurthestSquare(adjLi, currPos, board, data)
     #print("head is", currPos, "furthest square is", targetSquare)
     if targetSquare == currPos:#if already in that spot
         targetSquare = None
     
-    path = longestDfs(adjLi, currPos, iterations, targetSquare)
+    path = longestDfs(adjLi, currPos, ITERATIONS, targetSquare)
+    print("longest dfs success")
     if len(path) == 1:
         return errMove()
     return dirToAdj(currPos,path[1])
@@ -609,7 +600,7 @@ def DFS(adjLi, currPos, targetSquare, visited):
         DFSLen = len(visited)
     return visited
         
-#TODO make it faster
+#TODO make it more efficient
 def getCorners(pos):
     """gets all positions in a square around a given position
 
@@ -630,6 +621,30 @@ def getCorners(pos):
         for y in range(yStart-1, yStart+2):
             arr.remove((x,y))
     return arr
+
+#XXX replace this with better option?
+def safetyRating(square, adjLi):
+    if square not in adjLi:
+        return None
+    score = 0
+    for neighbor in adjLi[square][0]:
+        score += adjLi[neighbor][2]
+    return score
+
+def getSafestOption(sqA, ratingA, sqB, ratingB, adjLi):
+    if ratingA is None and ratingB is None:
+        return None
+
+    if ratingA is None:
+        return sqB
+    if ratingB is None:
+        return sqA
+    
+    if ratingA < ratingB:
+        return sqA
+    return sqB
+    #result = sqA if ratingA < ratingB else sqB
+    #return result
 
 CW_DICT = {(-2,-1):(-2,0), (-2,0):(-2,1),
 (-2,1):(-2, 2), (-2, 2):(-1, 2), (-1,2):(0,2),
@@ -655,33 +670,32 @@ def rotateAttack(currPos, enemyHead, rotateDir=True, returnMove=True):
         return (newDiff[0]+enemyHead[0], newDiff[1]+enemyHead[1])
 
 def clockwiseSquare(currPos, enemyHead, board):
-    nextNode = rotateAttack(currPos, enemyHead, True, False)
-    return board[nextNode[1]][nextNode[0]]
+    return rotateAttack(currPos, enemyHead, True, False)
 
 def counterclockwiseSquare(currPos, enemyHead, board):
-    nextNode = rotateAttack(currPos, enemyHead, False, False)
-    return board[nextNode[1]][nextNode[0]]
+    return rotateAttack(currPos, enemyHead, False, False)
 
 def safeDir(currPos, enemyHead, board, adjLi):
-    rotateNode = clockwiseSquare(currPos, enemyHead, board)
-    if rotateNode in adjLi and adjLi[rotateNode][1] < SELF:
-        return 0#clockwise
+    cwSquare = clockwiseSquare(currPos, enemyHead, board)
+    cwRating = safetyRating(cwSquare, adjLi)
 
-    rotateNode = counterclockwiseSquare(currPos, enemyHead, board)
-    if rotateNode in adjLi and adjLi[rotateNode][1] < SELF:
-        return 1#counterclockwise
-    return 2#nowhere is safe
+    ccwSquare = counterclockwiseSquare(currPos, enemyHead, board)
+    ccwRating = safetyRating(ccwSquare, adjLi)
+
+    bestOption = getSafestOption(cwSquare, cwRating, ccwSquare, ccwRating, adjLi)
+    if bestOption is None:
+        return None#nowhere is safe
+    else:
+        return bestOption
 
 #TODO figure out how to pick best side, maybe take average of DFS
 #at each possibility, pick longest one
 def sideBlock(currPos, enemyHead, adjLi, board, data):
-    safeDirection = safeDir(currPos, enemyHead, board, adjLi)
-    if safeDirection == 0:#clockwise
-        return rotateAttack(currPos, enemyHead, True)
-    elif safeDirection == 1:#counter clockwise
-        return rotateAttack(currPos, enemyHead, False)
+    safeSpace = safeDir(currPos, enemyHead, board, adjLi)
+    if safeSpace is not None:
+        return dirToAdj(currPos, safeSpace)
     else:
-        return stallForTime(adjLi, currPos, board, data)
+        return stallForTime(adjLi, currPos, board, data) 
 
 def errMove():
     """for when there is no good option
@@ -695,9 +709,11 @@ def attackProtocol(adjLi, currPos, board, data):
     """
         WIP
     """
+    print("FOR BLOOD, FOR GLORY")
     pathToVictim = pathToThing(adjLi, currPos, HEAD)
     victimHead = None
     if pathToVictim == -1:
+        print("NO PATH TO VICTIM")
         return stallForTime(adjLi, currPos, board, data)
     else:#if no victim in range
         victimHead = pathToVictim[-1]
@@ -711,10 +727,14 @@ def attackProtocol(adjLi, currPos, board, data):
             shortestPath = pathToCorner
 
     if shortestPath is None:
+        print("cant get to victim corner")
         return stallForTime(adjLi, currPos, board, data)
     if len(shortestPath) == 1:
+        print("in the right spot", currPos)
+        showArr(board)
         return sideBlock(currPos, victimHead, adjLi, board, data)
     else:
+        print("going that way")
         return dirToAdj(currPos, shortestPath[1])#go to that square
 
 #should take some stuff from getFoodPaths()
@@ -742,16 +762,42 @@ def getFoodPaths(dijkTable, adjLi, data, head):
             allPaths.append(path)
     return sorted(allPaths, key=lambda path:path[0])
 
+def mindex(ratios):
+    min=math.inf
+    minDex = None
+    for i, ratio in enumerate(ratios):
+        if ratio < min:
+            min = ratio
+            minDex = i
+    return minDex
+
 def determineBestMeal(adjLi, allFoodPaths, currHp, bodyLen, board, data):
-    allFoodPaths = filter(lambda path: len(path[1:]) > currHp-bodyLen, allFoodPaths)#gets rid of inaccessable ones, for efficiency
-    justPaths = [path[1:] for path in allFoodPaths]
-    nonSuicidal = [path for path in justPaths if not isSuicide(adjLi, path, board, data)]
-    #now have a bunch of paths that are all decent
-    #for now i'll return start, maybe do better one later #XXX
-    if len(nonSuicidal) > 0:
-        return nonSuicidal[0]#remember that sorted by weighted sums
+    #return allFoodPaths[0]#works better
+    allFoodPaths = [path for path in allFoodPaths if len(path)-1 >= currHp-bodyLen]
+    #print("all foods is", allFoodPaths)
+    #justPaths = [path[1:] for path in allFoodPaths]
+    #nonSuicidal = [path for path in justPaths if not isSuicide(adjLi, path, board, data)]
+    
+    minRatio = 0
+    minPath = None
+    for i, path in enumerate(allFoodPaths):
+        justPath = path[1:]
+        futurePosition = possibleAdj(adjLi, board, justPath, data)
+        reachableSquares = regularDFS(futurePosition, path[-1], [])
+        ratio = len(reachableSquares)/path[0]
+        if ratio > minRatio:
+            minRatio = ratio
+            minPath = path
+    #maybe check number of all reachable squares and take ratio of 
+    if len(allFoodPaths) > 0:
+        return minPath
     else:
         return None
+    
+    '''if len(nonSuicidal) > 0:
+        return nonSuicidal[0]#remember that sorted by weighted sums
+    else:
+        return None'''
 
 '''{"game":{"id":"8481f485-029f-4ca7-82d3-3345bc70d76b"},"turn":7,"board":{"height":15,"width":15,"food":[{"x":11,"y":2},{"x":6,"y":8},{"x":5,"y":11},{"x":1,"y":3},{"x":7,"y":13},{"x":14,"y":11},{"x":10,"y":7},{"x":14,"y":13},{"x":1,"y":6},{"x":7,"y":14}],"snakes":[{"id":"c2e6e057-bea2-496e-8e4c-7b213117452d","name":"me","health":93,"body":[{"x":9,"y":3},{"x":8,"y":3},{"x":7,"y":3}]}]},"you":{"id":"540630d1-29e9-477a-9ab7-518222bf85f8","name":"you","health":93,"body":[{"x":15,"y":1},{"x":14,"y":1},
 {"x":13,"y":1}]}}'''
@@ -768,34 +814,45 @@ find way to keep snake in strike zone and find best path to do so
 
 @bottle.post('/move')
 def move():
+    print("get data")
     data = bottle.request.json
     currHp = data["you"]["health"]
     currPos = headPos(data)
     bodyLen = selfLength(data)
 
+    print("make board")
     board = makeBoard(data)
+    print("make adj")
     adjLi = makeAdjList(board)
+    print("weight adj")
     makeWeightedAdj(adjLi, data)
+    print("make dijk pics")
     dijkTable = makeDijk(adjLi, currPos)
     
+    print("get food")
     allFoodPaths = getFoodPaths(dijkTable, adjLi, data, currPos)
     if len(allFoodPaths) == 0:#no path to food
         if noAvailableEnemies(adjLi, currPos):#no nearby enemies
+            print("stall 1")
             return stallForTime(adjLi, currPos, board, data)
         else:#are nearby enemies
+            print("attack 1")
             return attackProtocol(adjLi, currPos, board, data)
 
     #if here there is a food path
     #determine best meal is messing with list
+    print("get good meal")
     bestMeal = determineBestMeal(adjLi, allFoodPaths, currHp, bodyLen, board, data)
     if snakeIsHungry(bestMeal, currHp, bodyLen):
-        print("hungry snake")
-        return dirToAdj(currPos, bestMeal[1])
+        print("moveing to food")
+        return dirToAdj(currPos, bestMeal[2])#0 is value, 1 is head
 
     if noEnemies(data):
+        print("stall 2")
         stallForTime(adjLi, currPos, board, data)
 
     #if here snake isnt hungry and ready to wreck some fools
+    print("finaal attack")
     return attackProtocol(adjLi, currPos, board, data)
 
     #showArr(board)
@@ -808,7 +865,7 @@ def move():
 
 @bottle.post('/end')
 def end():
-    data = bottle.request.json
+    #data = bottle.request.json
 
     return end_response()
 
