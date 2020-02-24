@@ -106,6 +106,10 @@ def makeBoard(data):
                 arr[part["y"]][part["x"]] = SELF
             else:
                 arr[part["y"]][part["x"]] = BODY
+    if data["turn"] == 0:
+        myHead = data["you"]["body"][0]
+        x,y = myHead["x"], myHead["y"]
+        arr[y][x]=MYHEAD
     
     #showArr(arr)
     return arr
@@ -523,7 +527,7 @@ def stallForTime(adjLi, currPos, board, data, bestMeal=None):
     """
 
     ouroborous = pathToThing(adjLi, currPos, tailPos(data))
-    if ouroborous != -1:# and ouroborousIsSafe(adjLi, ouroborous, board):
+    if ouroborous != -1 and len(ouroborous) > 1:# and ouroborousIsSafe(adjLi, ouroborous, board):
         return dirToAdj(currPos, ouroborous[1])
     #if past this there is no path to tail
     targetSquare = getFurthestSquare(adjLi, currPos, board, data)
@@ -727,14 +731,14 @@ def attackProtocol(adjLi, currPos, board, data):
             shortestPath = pathToCorner
 
     if shortestPath is None:
-        print("cant get to victim corner")
+        #print("cant get to victim corner")
         return stallForTime(adjLi, currPos, board, data)
     if len(shortestPath) == 1:
         print("in the right spot", currPos)
-        showArr(board)
+        #showArr(board)
         return sideBlock(currPos, victimHead, adjLi, board, data)
     else:
-        print("going that way")
+        #print("going that way")
         return dirToAdj(currPos, shortestPath[1])#go to that square
 
 #should take some stuff from getFoodPaths()
@@ -803,7 +807,7 @@ def determineBestMeal(adjLi, allFoodPaths, currHp, bodyLen, board, data):
 {"x":13,"y":1}]}}'''
 #engine.exe dev
 #python app\main.py
-#http://0.0.0.0:8088/
+#http://0.0.0.0:8090/
 
 
 #general TODO
@@ -814,45 +818,33 @@ find way to keep snake in strike zone and find best path to do so
 
 @bottle.post('/move')
 def move():
-    print("get data")
     data = bottle.request.json
     currHp = data["you"]["health"]
     currPos = headPos(data)
     bodyLen = selfLength(data)
 
-    print("make board")
     board = makeBoard(data)
-    print("make adj")
     adjLi = makeAdjList(board)
-    print("weight adj")
     makeWeightedAdj(adjLi, data)
-    print("make dijk pics")
     dijkTable = makeDijk(adjLi, currPos)
     
-    print("get food")
     allFoodPaths = getFoodPaths(dijkTable, adjLi, data, currPos)
     if len(allFoodPaths) == 0:#no path to food
         if noAvailableEnemies(adjLi, currPos):#no nearby enemies
-            print("stall 1")
             return stallForTime(adjLi, currPos, board, data)
         else:#are nearby enemies
-            print("attack 1")
             return attackProtocol(adjLi, currPos, board, data)
 
     #if here there is a food path
     #determine best meal is messing with list
-    print("get good meal")
     bestMeal = determineBestMeal(adjLi, allFoodPaths, currHp, bodyLen, board, data)
     if snakeIsHungry(bestMeal, currHp, bodyLen):
-        print("moveing to food")
         return dirToAdj(currPos, bestMeal[2])#0 is value, 1 is head
 
     if noEnemies(data):
-        print("stall 2")
         stallForTime(adjLi, currPos, board, data)
 
     #if here snake isnt hungry and ready to wreck some fools
-    print("finaal attack")
     return attackProtocol(adjLi, currPos, board, data)
 
     #showArr(board)
@@ -876,6 +868,6 @@ if __name__ == '__main__':
     bottle.run(
         application,
         host=os.getenv('IP', '0.0.0.0'),
-        port=os.getenv('PORT', '8088'),
+        port=os.getenv('PORT', '8090'),
         debug=os.getenv('DEBUG', True)
     )
