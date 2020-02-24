@@ -91,6 +91,7 @@ def makeBoard(data):
         arr[meal["y"]][meal["x"]] = FOOD
 
     #snakes
+
     for snake in board["snakes"]:
         isSelf = False
         if snake["id"] == data["you"]["id"]:
@@ -101,15 +102,14 @@ def makeBoard(data):
         else:
             arr[y][x] = HEAD
 
+        if data["turn"] == 0: #there will be no other bodies
+            return arr
+
         for part in snake["body"][1:-1]:#-1 so doesnt count tail
             if isSelf:
                 arr[part["y"]][part["x"]] = SELF
             else:
                 arr[part["y"]][part["x"]] = BODY
-    if data["turn"] == 0:
-        myHead = data["you"]["body"][0]
-        x,y = myHead["x"], myHead["y"]
-        arr[y][x]=MYHEAD
     
     #showArr(arr)
     return arr
@@ -713,11 +713,11 @@ def attackProtocol(adjLi, currPos, board, data):
     """
         WIP
     """
-    print("FOR BLOOD, FOR GLORY")
+    #print("FOR BLOOD, FOR GLORY")
     pathToVictim = pathToThing(adjLi, currPos, HEAD)
     victimHead = None
     if pathToVictim == -1:
-        print("NO PATH TO VICTIM")
+        #print("NO PATH TO VICTIM")
         return stallForTime(adjLi, currPos, board, data)
     else:#if no victim in range
         victimHead = pathToVictim[-1]
@@ -748,8 +748,8 @@ def dijkRetrace(start, food, dijkTable):
         return None
     path=[dijkTable[curr][0], curr]
     for _ in range(len(dijkTable)):#is practically infinite loop
-        if curr not in dijkTable:
-            print("dijkAYAYA", "head at",start, "food at", food, dijkTable)
+        #if curr not in dijkTable:
+        #    print("dijkAYAYA", "head at",start, "food at", food, dijkTable)
 
         curr = dijkTable[curr][1]
         path.insert(1, curr)
